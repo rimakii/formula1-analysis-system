@@ -1,0 +1,236 @@
+from sqlalchemy.orm import Session
+from sqlalchemy import text, func
+from typing import List, Dict, Any, Optional
+from app.models import Driver, Constructor, Race, Result
+import logging
+
+logger = logging.getLogger(__name__)
+
+class AnalyticsService:
+    """
+    Сервис для выполнения сложных аналитических SQL запросов.
+    Использует прямой SQL для оптимальной производительности.
+    """
+
+    def __init__(self, db: Session):
+        self.db = db
+
+    def get_driver_career_stats(self, driver_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Получить полную статистику карьеры пилота через SQL функцию.
+        """
+        try:
+            query = text("SELECT * FROM get_driver_career_stats(:driver_id)")
+            result = self.db.execute(query, {"driver_id": driver_id}).fetchone()
+
+            if result:
+                return dict(result._mapping)
+            return None
+        except Exception as e:
+            logger.error(f"Ошибка при получении статистики пилота {driver_id}: {e}")
+            return None
+
+    def get_season_driver_standings(self, year: int) -> List[Dict[str, Any]]:
+        """
+        Получить турнирную таблицу пилотов за сезон.
+        """
+        try:
+            query = text("SELECT * FROM get_season_driver_standings(:year)")
+            results = self.db.execute(query, {"year": year}).fetchall()
+            return [dict(row._mapping) for row in results]
+        except Exception as e:
+            logger.error(f"Ошибка при получении турнирной таблицы {year}: {e}")
+            return []
+
+    def get_season_constructor_standings(self, year: int) -> List[Dict[str, Any]]:
+        """
+        Получить турнирную таблицу команд за сезон.
+        """
+        try:
+            query = text("SELECT * FROM get_season_constructor_standings(:year)")
+            results = self.db.execute(query, {"year": year}).fetchall()
+            return [dict(row._mapping) for row in results]
+        except Exception as e:
+            logger.error(f"Ошибка при получении турнирной таблицы команд {year}: {e}")
+            return []
+
+    def get_circuit_history(self, circuit_id: int, limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        Получить историю победителей на трассе.
+        """
+        try:
+            query = text("SELECT * FROM get_circuit_history(:circuit_id, :limit)")
+            results = self.db.execute(query, {
+                "circuit_id": circuit_id,
+                "limit": limit
+            }).fetchall()
+            return [dict(row._mapping) for row in results]
+        except Exception as e:
+            logger.error(f"Ошибка при получении истории трассы {circuit_id}: {e}")
+            return []
+
+    def get_constructor_season_results(
+        self, 
+        constructor_id: int, 
+        year: int
+    ) -> List[Dict[str, Any]]:
+        """
+        Получить все результаты команды за сезон.
+        """
+        try:
+            query = text("SELECT * FROM get_constructor_season_results(:constructor_id, :year)")
+            results = self.db.execute(query, {
+                "constructor_id": constructor_id,
+                "year": year
+            }).fetchall()
+            return [dict(row._mapping) for row in results]
+        except Exception as e:
+            logger.error(f"Ошибка при получении результатов команды {constructor_id}: {e}")
+            return []
+
+    def get_all_driver_statistics(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """
+        Получить топ пилотов всех времен из представления.
+        """
+        try:
+            query = text(
+                "SELECT * FROM v_driver_statistics "
+                "ORDER BY total_points DESC LIMIT :limit"
+            )
+            results = self.db.execute(query, {"limit": limit}).fetchall()
+            return [dict(row._mapping) for row in results]
+        except Exception as e:
+            logger.error(f"Ошибка при получении статистики пилотов: {e}")
+            return []
+
+    def get_all_constructor_statistics(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """
+        Получить топ команд всех времен из представления.
+        """
+        try:
+            query = text(
+                "SELECT * FROM v_constructor_statistics "
+                "ORDER BY total_points DESC LIMIT :limit"
+            )
+            results = self.db.execute(query, {"limit": limit}).fetchall()
+            return [dict(row._mapping) for row in results]
+        except Exception as e:
+            logger.error(f"Ошибка при получении статистики команд: {e}")
+            return []
+
+    def get_race_results_detailed(
+        self, 
+        race_id: int
+    ) -> List[Dict[str, Any]]:
+        """
+        Получить детальные результаты гонки с именами из представления.
+        """
+        try:
+            query = text(
+                "SELECT * FROM v_race_results_detailed "
+                "WHERE result_id IN "
+                "(SELECT result_id FROM results WHERE race_id = :race_id) "
+                "ORDER BY position_order"
+            )
+            results = self.db.execute(query, {"race_id": race_id}).fetchall()
+            return [dict(row._mapping) for row in results]
+        except Exception as e:
+            logger.error(f"Ошибка при получении детальных результатов гонки {race_id}: {e}")
+            return []
+
+    def get_driver_wins_by_circuit(self, driver_id: int) -> List[Dict[str, Any]]:
+        """
+        Получить статистику побед пилота по трассам.
+        Сложный JOIN запрос с агрегацией.
+        """
+        try:
+            query = text("""
+                SELECT 
+                    c.circuit_id,
+                    c.name as circuit_name,
+                    c.country,
+                    COUNT(*) as wins,
+                    MIN(ra.date) as first_win,
+                    MAX(ra.date) as last_win
+                FROM results r
+                JOIN races ra ON r.race_id = ra.race_id
+                JOIN circuits c ON ra.circuit_id = c.circuit_id
+                WHERE r.driver_id = :driver_id AND r.position = 1
+                GROUP BY c.circuit_id, c.name, c.country
+                ORDER BY wins DESC
+            """)
+            results = self.db.execute(query, {"driver_id": driver_id}).fetchall()
+            return [dict(row._mapping) for row in results]
+        except Exception as e:
+            logger.error(f"Ошибка при получении побед пилота по трассам: {e}")
+            return []
+
+    def get_head_to_head(
+        self, 
+        driver1_id: int, 
+        driver2_id: int
+    ) -> Dict[str, Any]:
+        """
+        Сравнение двух пилотов (head-to-head статистика).
+        """
+        try:
+            query = text("""
+                WITH driver1_stats AS (
+                    SELECT 
+                        COUNT(*) FILTER (WHERE position = 1) as wins,
+                        COUNT(*) FILTER (WHERE position BETWEEN 1 AND 3) as podiums,
+                        SUM(points) as total_points
+                    FROM results WHERE driver_id = :driver1_id
+                ),
+                driver2_stats AS (
+                    SELECT 
+                        COUNT(*) FILTER (WHERE position = 1) as wins,
+                        COUNT(*) FILTER (WHERE position BETWEEN 1 AND 3) as podiums,
+                        SUM(points) as total_points
+                    FROM results WHERE driver_id = :driver2_id
+                )
+                SELECT 
+                    d1.wins as driver1_wins,
+                    d1.podiums as driver1_podiums,
+                    d1.total_points as driver1_points,
+                    d2.wins as driver2_wins,
+                    d2.podiums as driver2_podiums,
+                    d2.total_points as driver2_points
+                FROM driver1_stats d1, driver2_stats d2
+            """)
+            result = self.db.execute(query, {
+                "driver1_id": driver1_id,
+                "driver2_id": driver2_id
+            }).fetchone()
+
+            if result:
+                return dict(result._mapping)
+            return {}
+        except Exception as e:
+            logger.error(f"Ошибка при сравнении пилотов: {e}")
+            return {}
+
+    def get_performance_by_year(self, driver_id: int) -> List[Dict[str, Any]]:
+        """
+        Получить статистику пилота по годам.
+        """
+        try:
+            query = text("""
+                SELECT 
+                    ra.year,
+                    COUNT(*) as races,
+                    SUM(r.points) as points,
+                    COUNT(*) FILTER (WHERE r.position = 1) as wins,
+                    COUNT(*) FILTER (WHERE r.position BETWEEN 1 AND 3) as podiums,
+                    AVG(r.position) FILTER (WHERE r.position IS NOT NULL) as avg_position
+                FROM results r
+                JOIN races ra ON r.race_id = ra.race_id
+                WHERE r.driver_id = :driver_id
+                GROUP BY ra.year
+                ORDER BY ra.year
+            """)
+            results = self.db.execute(query, {"driver_id": driver_id}).fetchall()
+            return [dict(row._mapping) for row in results]
+        except Exception as e:
+            logger.error(f"Ошибка при получении статистики по годам: {e}")
+            return []
