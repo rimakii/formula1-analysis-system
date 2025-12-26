@@ -76,9 +76,9 @@ async def batch_import_constructors(
 @router.post("/import-results")
 async def batch_import_results(
     file: UploadFile = File(...),
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    current_user = Depends(require_admin)
+    current_user = Depends(require_admin),
+    background_tasks: BackgroundTasks = None
 ):
     """
     Батчевая загрузка результатов гонок из CSV файла.
@@ -115,17 +115,6 @@ async def batch_import_results(
         logger.error(f"Ошибка при загрузке результатов: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Ошибка загрузки: {str(e)}")
 
-@router.get("/import-status")
-async def get_import_status(
-    current_user = Depends(require_admin)
-):
-    """
-    Получить статус выполнения батчевых операций.
-    """
-    return {
-        "message": "Статус импорта",
-        "note": "Функционал отслеживания статуса в разработке"
-    }
 
 @router.post("/import-all-kaggle")
 async def import_all_kaggle_data(

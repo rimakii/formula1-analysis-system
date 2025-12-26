@@ -52,7 +52,7 @@ CREATE TABLE circuits (
 -- Таблица ѝтатуѝов
 CREATE TABLE status (
     status_id SERIAL PRIMARY KEY,
-    status VARCHAR(100) NOT NULL UNIQUE
+    status VARCHAR(100) NOT NULL
 );
 
 -- ====================

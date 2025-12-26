@@ -16,10 +16,10 @@ BEGIN
         WHEN 'races' THEN 'race_id'
         WHEN 'results' THEN 'result_id'
         WHEN 'qualifying' THEN 'qualify_id'
-        WHEN 'lap_times' THEN 'race_id'  -- ??????????? ????, ?????????? race_id
-        WHEN 'pit_stops' THEN 'race_id'  -- ??????????? ????
-        WHEN 'driver_standings' THEN 'driver_standings_id'
-        WHEN 'constructor_standings' THEN 'constructor_standings_id'
+        WHEN 'lap_times' THEN 'lap_time_id'
+        WHEN 'pit_stops' THEN 'pit_stop_id'
+        WHEN 'driver_standings' THEN 'driver_standing_id' 
+        WHEN 'constructor_standings' THEN 'constructor_standing_id'
         WHEN 'users' THEN 'user_id'
         ELSE NULL
     END;

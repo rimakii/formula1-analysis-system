@@ -7,78 +7,121 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class BatchLoader:
-    """
-    Сервис для батчевой загрузки данных из CSV файлов.
-    Включает логирование ошибок и обработку исключений.
-    """
+def safe_int(value):
+    if pd.isna(value) or str(value).strip() in ['\\N', '', 'nan', 'None']:
+        return None
+    try:
+        return int(float(str(value)))
+    except:
+        return None
 
+def safe_float(value):
+    if pd.isna(value) or str(value).strip() in ['\\N', '', 'nan', 'None']:
+        return None
+    try:
+        return float(str(value))
+    except:
+        return None
+
+def safe_str(value):
+    if pd.isna(value) or str(value).strip() in ['\\N', '', 'nan', 'None']:
+        return None
+    return str(value).strip()
+
+def safe_date(value):
+    if pd.isna(value) or str(value).strip() in ['\\N', '', 'nan', 'None']:
+        return None
+    try:
+        return pd.to_datetime(value).date()
+    except:
+        return None
+
+def safe_time(value):
+    if pd.isna(value) or str(value).strip() in ['\\N', '', 'nan', 'None']:
+        return None
+    try:
+        return pd.to_datetime(value, format='%H:%M:%S').time()
+    except:
+        return None
+
+class BatchLoader:
     def __init__(self, db: Session):
         self.db = db
         self.errors = []
 
     def load_drivers(self, df: pd.DataFrame) -> dict:
-        """Загрузить пилотов из DataFrame"""
+        """????????? ??????? ?? DataFrame ? ????????? ??????????"""
         success_count = 0
         error_count = 0
         errors = []
 
-        logger.info(f"Начало загрузки {len(df)} пилотов...")
+        logger.info(f"?????? ???????? {len(df)} ???????...")
 
         for index, row in df.iterrows():
             try:
+                driver_id = safe_int(row.get('driverId'))
+                
+                # ????????? ?????????????
+                existing = self.db.query(Driver).filter(Driver.driver_id == driver_id).first()
+                if existing:
+                    logger.debug(f"????? {driver_id} ??? ??????????, ??????????")
+                    continue
+
                 driver = Driver(
-                    driver_id=row.get('driverId'),
-                    driver_ref=row['driverRef'],
-                    number=row.get('number') if pd.notna(row.get('number')) else None,
-                    code=row.get('code') if pd.notna(row.get('code')) else None,
-                    forename=row['forename'],
-                    surname=row['surname'],
-                    dob=pd.to_datetime(row['dob']).date() if pd.notna(row.get('dob')) else None,
-                    nationality=row.get('nationality'),
-                    url=row.get('url')
+                    driver_id=driver_id,
+                    driver_ref=safe_str(row.get('driverRef')) or 'unknown',
+                    number=safe_int(row.get('number')),
+                    code=safe_str(row.get('code')),
+                    forename=safe_str(row.get('forename')) or 'Unknown',
+                    surname=safe_str(row.get('surname')) or 'Unknown',
+                    dob=safe_date(row.get('dob')),
+                    nationality=safe_str(row.get('nationality')),
+                    url=safe_str(row.get('url'))
                 )
-                self.db.merge(driver)
+                self.db.add(driver)
                 success_count += 1
 
                 if success_count % 100 == 0:
                     self.db.commit()
-                    logger.info(f"Загружено {success_count} пилотов...")
+                    logger.info(f"????????? {success_count} ???????...")
 
             except Exception as e:
                 error_count += 1
-                error_msg = f"Строка {index}: {str(e)}"
+                error_msg = f"?????? {index}, driver_id={row.get('driverId')}: {str(e)}"
                 errors.append(error_msg)
                 logger.error(error_msg)
+                self.db.rollback()
                 continue
 
         self.db.commit()
-        logger.info(f"Загрузка пилотов завершена. Успешно: {success_count}, Ошибок: {error_count}")
+        logger.info(f"???????? ??????? ?????????. ???????: {success_count}, ??????: {error_count}")
 
-        return {
-            "success": success_count,
-            "failed": error_count,
-            "errors": errors
-        }
+        return {"success": success_count, "failed": error_count, "errors": errors}
 
     def load_constructors(self, df: pd.DataFrame) -> dict:
-        """Загрузить команды из DataFrame"""
+        """????????? ??????? ?? DataFrame ? ????????? ??????????"""
         success_count = 0
         error_count = 0
         errors = []
 
-        logger.info(f"Начало загрузки {len(df)} команд...")
+        logger.info(f"?????? ???????? {len(df)} ??????...")
 
         for index, row in df.iterrows():
             try:
+                constructor_id = safe_int(row.get('constructorId'))
+                
+                existing = self.db.query(Constructor).filter(Constructor.constructor_id == constructor_id).first()
+                if existing:
+                    continue
+
                 constructor = Constructor(
-                    constructor_id=row.get('constructorId'),
-                    constructor_ref=row['constructorRef'],
-                    name=row['name'],
-                    nationality=row.get('nationality'),
-                    url=row.get('url')
+                    constructor_id=constructor_id,
+                    constructor_ref=safe_str(row.get('constructorRef')) or 'unknown',
+                    name=safe_str(row.get('name')) or 'Unknown',
+                    nationality=safe_str(row.get('nationality')),
+                    url=safe_str(row.get('url'))
                 )
-                self.db.merge(constructor)
+                self.db.add(constructor)
                 success_count += 1
 
                 if success_count % 50 == 0:
@@ -86,132 +129,128 @@ class BatchLoader:
 
             except Exception as e:
                 error_count += 1
-                errors.append(f"Строка {index}: {str(e)}")
-                logger.error(f"Ошибка загрузки команды в строке {index}: {e}")
+                errors.append(f"?????? {index}: {str(e)}")
+                logger.error(f"?????? ???????? ??????? ? ?????? {index}: {e}")
+                self.db.rollback()
                 continue
 
         self.db.commit()
-        logger.info(f"Загрузка команд завершена. Успешно: {success_count}, Ошибок: {error_count}")
+        logger.info(f"???????? ?????? ?????????. ???????: {success_count}, ??????: {error_count}")
 
-        return {
-            "success": success_count,
-            "failed": error_count,
-            "errors": errors
-        }
+        return {"success": success_count, "failed": error_count, "errors": errors}
 
     def load_circuits(self, df: pd.DataFrame) -> dict:
-        """Загрузить трассы из DataFrame"""
+        """????????? ?????? ?? DataFrame ? ????????? ??????????"""
         success_count = 0
         error_count = 0
         errors = []
 
-        logger.info(f"Начало загрузки {len(df)} трасс...")
+        logger.info(f"?????? ???????? {len(df)} ?????...")
 
         for index, row in df.iterrows():
             try:
+                circuit_id = safe_int(row.get('circuitId'))
+                
+                existing = self.db.query(Circuit).filter(Circuit.circuit_id == circuit_id).first()
+                if existing:
+                    continue
+
                 circuit = Circuit(
-                    circuit_id=row.get('circuitId'),
-                    circuit_ref=row['circuitRef'],
-                    name=row['name'],
-                    location=row.get('location'),
-                    country=row.get('country'),
-                    lat=row.get('lat') if pd.notna(row.get('lat')) else None,
-                    lng=row.get('lng') if pd.notna(row.get('lng')) else None,
-                    alt=row.get('alt') if pd.notna(row.get('alt')) else None,
-                    url=row.get('url')
+                    circuit_id=circuit_id,
+                    circuit_ref=safe_str(row.get('circuitRef')) or 'unknown',
+                    name=safe_str(row.get('name')) or 'Unknown',
+                    location=safe_str(row.get('location')),
+                    country=safe_str(row.get('country')),
+                    lat=safe_float(row.get('lat')),
+                    lng=safe_float(row.get('lng')),
+                    alt=safe_int(row.get('alt')),
+                    url=safe_str(row.get('url'))
                 )
-                self.db.merge(circuit)
+                self.db.add(circuit)
                 success_count += 1
 
             except Exception as e:
                 error_count += 1
-                errors.append(f"Строка {index}: {str(e)}")
+                errors.append(f"?????? {index}: {str(e)}")
+                self.db.rollback()
                 continue
 
         self.db.commit()
-        logger.info(f"Загрузка трасс завершена. Успешно: {success_count}")
+        logger.info(f"???????? ????? ?????????. ???????: {success_count}")
 
-        return {
-            "success": success_count,
-            "failed": error_count,
-            "errors": errors
-        }
+        return {"success": success_count, "failed": error_count, "errors": errors}
 
     def load_results(self, df: pd.DataFrame) -> dict:
-        """
-        Загрузить результаты гонок из DataFrame.
-        Транзакционная таблица с >5000 записей.
-        """
+        """????????? ?????????? ????? ?? DataFrame ? ????????? ??????????"""
         success_count = 0
         error_count = 0
         errors = []
 
-        logger.info(f"Начало загрузки {len(df)} результатов...")
+        logger.info(f"?????? ???????? {len(df)} ???????????...")
 
         for index, row in df.iterrows():
             try:
+                result_id = safe_int(row.get('resultId'))
+                
+                # ????????? ?????????????
+                existing = self.db.query(Result).filter(Result.result_id == result_id).first()
+                if existing:
+                    continue
+
                 result = Result(
-                    result_id=row.get('resultId'),
-                    race_id=row['raceId'],
-                    driver_id=row['driverId'],
-                    constructor_id=row['constructorId'],
-                    number=row.get('number') if pd.notna(row.get('number')) else None,
-                    grid=row['grid'],
-                    position=row.get('position') if pd.notna(row.get('position')) else None,
-                    position_text=row['positionText'],
-                    position_order=row['positionOrder'],
-                    points=row.get('points', 0),
-                    laps=row['laps'],
-                    time_text=row.get('time') if pd.notna(row.get('time')) else None,
-                    milliseconds=row.get('milliseconds') if pd.notna(row.get('milliseconds')) else None,
-                    fastest_lap=row.get('fastestLap') if pd.notna(row.get('fastestLap')) else None,
-                    rank=row.get('rank') if pd.notna(row.get('rank')) else None,
-                    fastest_lap_time=row.get('fastestLapTime') if pd.notna(row.get('fastestLapTime')) else None,
-                    fastest_lap_speed=row.get('fastestLapSpeed') if pd.notna(row.get('fastestLapSpeed')) else None,
-                    status_id=row['statusId']
+                    result_id=result_id,
+                    race_id=int(row['raceId']),
+                    driver_id=int(row['driverId']),
+                    constructor_id=int(row['constructorId']),
+                    number=safe_int(row.get('number')),
+                    grid=int(row['grid']),
+                    position=safe_int(row.get('position')),
+                    position_text=safe_str(row.get('positionText')) or 'N/A',
+                    position_order=int(row['positionOrder']),
+                    points=safe_float(row.get('points')) or 0.0,
+                    laps=int(row['laps']),
+                    time_text=safe_str(row.get('time')),
+                    milliseconds=safe_int(row.get('milliseconds')),
+                    fastest_lap=safe_int(row.get('fastestLap')),
+                    rank=safe_int(row.get('rank')),
+                    fastest_lap_time=safe_str(row.get('fastestLapTime')),
+                    fastest_lap_speed=safe_float(row.get('fastestLapSpeed')),
+                    status_id=int(row['statusId'])
                 )
-                self.db.merge(result)
+                self.db.add(result)
                 success_count += 1
 
-                # Коммит каждые 500 записей для производительности
                 if success_count % 500 == 0:
                     self.db.commit()
-                    logger.info(f"Загружено {success_count}/{len(df)} результатов...")
+                    logger.info(f"????????? {success_count}/{len(df)} ???????????...")
 
             except Exception as e:
                 error_count += 1
-                if error_count <= 10:  # Логируем только первые 10 ошибок
-                    error_msg = f"Строка {index}: {str(e)}"
+                if error_count <= 20:
+                    error_msg = f"?????? {index}, result_id={row.get('resultId')}, driver_id={row.get('driverId')}: {str(e)}"
                     errors.append(error_msg)
                     logger.error(error_msg)
+                self.db.rollback()
                 continue
 
         self.db.commit()
-        logger.info(f"Загрузка результатов завершена. Успешно: {success_count}, Ошибок: {error_count}")
+        logger.info(f"???????? ??????????? ?????????. ???????: {success_count}, ??????: {error_count}")
 
-        return {
-            "success": success_count,
-            "failed": error_count,
-            "errors": errors
-        }
+        return {"success": success_count, "failed": error_count, "errors": errors}
 
     def load_results_async(self, df: pd.DataFrame):
-        """Асинхронная загрузка результатов (для больших файлов)"""
-        logger.info("Запуск асинхронной загрузки результатов...")
+        """??????????? ???????? ???????????"""
+        logger.info("?????? ??????????? ???????? ???????????...")
         result = self.load_results(df)
-        logger.info(f"Асинхронная загрузка завершена: {result}")
+        logger.info(f"??????????? ???????? ?????????: {result}")
 
     def load_all_kaggle_data(self):
-        """
-        Загрузить все данные из Kaggle dataset.
-        Файлы должны находиться в /data/kaggle_dataset/
-        """
+        """????????? ??? ?????? ?? Kaggle dataset"""
         import os
         DATA_PATH = "/data/kaggle_dataset"
 
-        logger.info("=== Начало загрузки полного Kaggle dataset ===" )
+        logger.info("=== ?????? ???????? ??????? Kaggle dataset ===")
 
-        # Загружаем в правильном порядке (из-за внешних ключей)
         files_order = [
             ("status.csv", self._load_status),
             ("drivers.csv", self._load_drivers_from_file),
@@ -224,65 +263,104 @@ class BatchLoader:
         for filename, load_func in files_order:
             filepath = os.path.join(DATA_PATH, filename)
             if os.path.exists(filepath):
-                logger.info(f"Загрузка {filename}...")
+                logger.info(f"???????? {filename}...")
                 try:
                     load_func(filepath)
                 except Exception as e:
-                    logger.error(f"Ошибка при загрузке {filename}: {e}")
+                    logger.error(f"?????? ??? ???????? {filename}: {e}")
             else:
-                logger.warning(f"Файл {filename} не найден")
+                logger.warning(f"???? {filename} ?? ??????")
 
-        logger.info("=== Загрузка Kaggle dataset завершена ===")
+        logger.info("=== ???????? Kaggle dataset ????????? ===")
 
     def _load_status(self, filepath: str):
+        """????????? ??????? ? ????????? ??????????"""
         df = pd.read_csv(filepath)
+        df = df.drop_duplicates(subset=['statusId'], keep='first')
+        success = 0
+        
         for _, row in df.iterrows():
-            status = Status(
-                status_id=row['statusId'],
-                status=row['status']
-            )
-            self.db.merge(status)
+            try:
+                status_id = int(row['statusId'])
+                
+                # ????????? ?????????????
+                existing = self.db.query(Status).filter(Status.status_id == status_id).first()
+                if existing:
+                    logger.debug(f"?????? {status_id} ??? ??????????, ??????????")
+                    continue
+                
+                status = Status(
+                    status_id=status_id,
+                    status=safe_str(row['status']) or 'Unknown'
+                )
+                self.db.add(status)
+                success += 1
+                
+                if success % 50 == 0:
+                    self.db.commit()
+                    
+            except Exception as e:
+                logger.error(f"?????? ???????? status_id={row.get('statusId')}: {e}")
+                self.db.rollback()
+                continue
+                
         self.db.commit()
-        logger.info(f"Загружено {len(df)} статусов")
+        logger.info(f"????????? {success} ????????")
 
     def _load_drivers_from_file(self, filepath: str):
         df = pd.read_csv(filepath)
         result = self.load_drivers(df)
-        logger.info(f"Результат загрузки пилотов: {result}")
+        logger.info(f"????????? ???????? ???????: {result}")
 
     def _load_constructors_from_file(self, filepath: str):
         df = pd.read_csv(filepath)
         result = self.load_constructors(df)
-        logger.info(f"Результат загрузки команд: {result}")
+        logger.info(f"????????? ???????? ??????: {result}")
 
     def _load_circuits_from_file(self, filepath: str):
         df = pd.read_csv(filepath)
         result = self.load_circuits(df)
-        logger.info(f"Результат загрузки трасс: {result}")
+        logger.info(f"????????? ???????? ?????: {result}")
 
     def _load_races_from_file(self, filepath: str):
+        """????????? ????? ? ????????? ??????????"""
         df = pd.read_csv(filepath)
         success = 0
+        
         for _, row in df.iterrows():
             try:
+                race_id = int(row['raceId'])
+                
+                # ????????? ?????????????
+                existing = self.db.query(Race).filter(Race.race_id == race_id).first()
+                if existing:
+                    continue
+                
                 race = Race(
-                    race_id=row['raceId'],
-                    year=row['year'],
-                    round=row['round'],
-                    circuit_id=row['circuitId'],
-                    name=row['name'],
-                    date=pd.to_datetime(row['date']).date(),
-                    time=pd.to_datetime(row['time']).time() if pd.notna(row.get('time')) else None,
-                    url=row.get('url')
+                    race_id=race_id,
+                    year=int(row['year']),
+                    round=int(row['round']),
+                    circuit_id=int(row['circuitId']),
+                    name=safe_str(row['name']) or 'Unknown',
+                    date=safe_date(row.get('date')),
+                    time=safe_time(row.get('time')),
+                    url=safe_str(row.get('url'))
                 )
-                self.db.merge(race)
+                self.db.add(race)
                 success += 1
+                
+                if success % 100 == 0:
+                    self.db.commit()
+                    
             except Exception as e:
-                logger.error(f"Ошибка загрузки гонки: {e}")
+                logger.error(f"?????? ???????? ????? race_id={row.get('raceId')}: {e}")
+                self.db.rollback()
+                continue
+                
         self.db.commit()
-        logger.info(f"Загружено {success} гонок")
+        logger.info(f"????????? {success} ?????")
 
     def _load_results_from_file(self, filepath: str):
         df = pd.read_csv(filepath)
         result = self.load_results(df)
-        logger.info(f"Результат загрузки результатов: {result}")
+        logger.info(f"????????? ???????? ???????????: {result}")
