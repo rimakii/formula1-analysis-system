@@ -40,12 +40,6 @@ cp .env.example .env
 ### 2. Скачайте датасет Kaggle
 
 Скачайте CSV файлы с [Kaggle](https://www.kaggle.com/datasets/rohanrao/formula-1-world-championship-1950-2020/data) и поместите в `database/data/kaggle_dataset/`:
-- circuits.csv
-- constructors.csv
-- drivers.csv
-- races.csv
-- results.csv
-- status.csv
 
 ### 3. Запустите систему
 ```bash
@@ -95,45 +89,6 @@ docker-compose exec backend python scripts/load_kaggle_data.py
 - `GET /api/analytics/driver-statistics` - Топ-50 пилотов
 - `GET /api/analytics/constructor-statistics` - Топ-50 команд
 
-## База данных
-
-### Таблицы (12 шт)
-- drivers, constructors, circuits, races
-- results (>25,000 записей), qualifying, lap_times, pit_stops
-- driver_standings, constructor_standings
-- users, audit_log
-
-### SQL функции (11 шт)
-**Скалярные:**
-- calculate_driver_total_points
-- calculate_driver_wins
-- calculate_driver_podiums
-- calculate_constructor_total_points
-- calculate_constructor_wins
-- calculate_average_lap_time
-
-**Табличные:**
-- get_season_driver_standings
-- get_season_constructor_standings
-- get_driver_career_stats
-- get_constructor_season_results
-- get_circuit_history
-
-### Представления (VIEW)
-- v_driver_statistics
-- v_constructor_statistics
-- v_race_results_detailed
-
-### Триггеры
-- Аудит изменений (INSERT/UPDATE/DELETE)
-- Автообновление updated_at
-
-## Оптимизация
-
-35+ индексов для быстрых запросов:
-- Поиск результатов: **19x быстрее**
-- Поиск пилота: **14x быстрее**
-- Статистика сезона: **12x быстрее**
 
 ## Структура проекта
 
