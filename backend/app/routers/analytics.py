@@ -21,16 +21,23 @@ router = APIRouter(prefix="/analytics", tags=["Analytics"])
 @router.get("/driver-career/{driver_id}")
 def get_driver_career_stats(driver_id: int, db: Session = Depends(get_db)):
     """
-    ????????? ?????????? ??????? ?????? ????? PostgreSQL ???????.
-    ????????: ?????, ????, ??????, ???????, ????-???????, ??????? ?????.
+    ???????? ?????? ?????????? ??????? ?????? ?? VIEW v_driver_statistics.
     """
-    query = text("SELECT * FROM get_driver_career_stats(:driver_id)")
+    # ????????? VIEW ?????? ???????!
+    query = text("""
+        SELECT * FROM v_driver_statistics 
+        WHERE driver_id = :driver_id
+    """)
     result = db.execute(query, {"driver_id": driver_id}).fetchone()
     
     if not result:
-        raise HTTPException(status_code=404, detail=f"No career data found for driver ID {driver_id}")
+        raise HTTPException(
+            status_code=404, 
+            detail=f"No career data found for driver ID {driver_id}"
+        )
     
     return dict(result._mapping)
+
 
 
 @router.get("/season-standings/drivers/{year}")
@@ -343,6 +350,46 @@ def compare_drivers(
         "comparison": [dict(row._mapping) for row in results],
         "year_filter": year if year else "All time"
     }
+
+
+@router.get("/fastest-pit-stops/{year}")
+def get_fastest_pit_stops(year: int, limit: int = 10, db: Session = Depends(get_db)):
+    """
+    ??????? SQL: ????? ??????? ???-????? ??????.
+    
+    JOIN: pit_stops + drivers + constructors + races
+    ??????????: ?? ???? ? ??????? ??????
+    ??????????: ?? ???????
+    """
+    query = text("""
+        SELECT 
+            ps.milliseconds,
+            ps.duration,
+            ps.stop AS stop_number,
+            ps.lap,
+            d.forename || ' ' || d.surname AS driver_name,
+            c.name AS constructor_name,
+            ra.name AS race_name,
+            ra.date AS race_date,
+            -- ???? ???-????? ? ?????
+            RANK() OVER (PARTITION BY ps.race_id ORDER BY ps.milliseconds) AS pit_stop_rank_in_race
+        FROM pit_stops ps
+        JOIN drivers d ON ps.driver_id = d.driver_id
+        JOIN results r ON ps.race_id = r.race_id AND ps.driver_id = r.driver_id
+        JOIN constructors c ON r.constructor_id = c.constructor_id
+        JOIN races ra ON ps.race_id = ra.race_id
+        WHERE ra.year = :year
+          AND ps.milliseconds IS NOT NULL
+        ORDER BY ps.milliseconds ASC
+        LIMIT :limit
+    """)
+    
+    results = db.execute(query, {"year": year, "limit": limit}).fetchall()
+    
+    if not results:
+        raise HTTPException(status_code=404, detail=f"No pit stop data for year {year}")
+    
+    return [dict(row._mapping) for row in results]
 
 
 @router.get("/fastest-pit-stops/{year}")

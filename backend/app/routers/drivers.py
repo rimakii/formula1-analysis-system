@@ -34,6 +34,17 @@ def get_driver(driver_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail=f"Driver with ID {driver_id} not found")
     return driver
 
+@router.get("/by-ref/{driver_ref}", response_model=DriverResponse)
+def get_driver_by_ref(driver_ref: str, db: Session = Depends(get_db)):
+    """???????? ?????? ?? driver_ref"""
+    driver = db.query(Driver).filter(Driver.driver_ref == driver_ref).first()
+    if not driver:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Driver with ref '{driver_ref}' not found"
+        )
+    return driver
+
 
 @router.post("/", response_model=DriverResponse, status_code=status.HTTP_201_CREATED)
 def create_driver(

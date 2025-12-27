@@ -4,8 +4,8 @@ F1 Analytics System
 """
 
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from datetime import date, time as Time, datetime
 from typing import Optional
-from datetime import date, time, datetime
 from decimal import Decimal
 
 
@@ -199,8 +199,9 @@ class RaceBase(BaseModel):
     circuit_id: int = Field(..., gt=0)
     name: str = Field(..., min_length=1, max_length=255)
     date: date
-    time: Optional[time] = None
+    time: Optional[Time] = None 
     url: Optional[str] = Field(None, max_length=255)
+
 
 
 class RaceCreate(RaceBase):
@@ -208,13 +209,21 @@ class RaceCreate(RaceBase):
     pass
 
 
-class RaceResponse(RaceBase):
+class RaceResponse(BaseModel):
     """????? ?????? ? ??????? ?????"""
     race_id: int
+    year: int
+    round: int
+    circuit_id: int
+    name: str
+    date: date
+    time: Optional[Time] = None
+    url: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     
     model_config = ConfigDict(from_attributes=True)
+
 
 
 class RaceUpdate(BaseModel):
@@ -224,7 +233,7 @@ class RaceUpdate(BaseModel):
     circuit_id: Optional[int] = Field(None, gt=0)
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     date: Optional[date] = None
-    time: Optional[time] = None
+    time: Optional[Time] = None
     url: Optional[str] = None
     
     model_config = ConfigDict(from_attributes=True)

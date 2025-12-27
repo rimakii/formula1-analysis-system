@@ -272,6 +272,7 @@ class BatchLoader:
                 logger.warning(f"???? {filename} ?? ??????")
 
         logger.info("=== ???????? Kaggle dataset ????????? ===")
+        self.fix_all_sequences()
 
     def _load_status(self, filepath: str):
         """????????? ??????? ? ????????? ??????????"""
@@ -364,3 +365,30 @@ class BatchLoader:
         df = pd.read_csv(filepath)
         result = self.load_results(df)
         logger.info(f"????????? ???????? ???????????: {result}")
+
+    def fix_all_sequences(self):
+        """????????? ??? sequences ????? ???????? ????????"""
+        from sqlalchemy import text
+        
+        logger.info("??????????? sequences...")
+        
+        sequences = [
+            ('drivers_driver_id_seq', 'drivers', 'driver_id'),
+            ('constructors_constructor_id_seq', 'constructors', 'constructor_id'),
+            ('circuits_circuit_id_seq', 'circuits', 'circuit_id'),
+            ('races_race_id_seq', 'races', 'race_id'),
+            ('results_result_id_seq', 'results', 'result_id'),
+            ('status_status_id_seq', 'status', 'status_id'),
+        ]
+        
+        for seq_name, table_name, id_column in sequences:
+            try:
+                query = text(
+                    f"SELECT setval('{seq_name}', "
+                    f"(SELECT COALESCE(MAX({id_column}), 0) + 1 FROM {table_name}), false)"
+                )
+                self.db.execute(query)
+                self.db.commit()
+                logger.info(f"? {seq_name} ?????????")
+            except Exception as e:
+                logger.error(f"? ?????? {seq_name}: {e}")
