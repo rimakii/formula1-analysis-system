@@ -1,14 +1,6 @@
--- F1 Analytics System Database Schema
--- Курѝоваѝ работа по диѝциплине "Базы данных"
-
--- Раѝширениѝ
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- ====================
--- СПРНВОЧНЫЕ ТНБЛИЦЫ
--- ====================
-
--- Таблица пилотов
+-- ??????? ???????
 CREATE TABLE drivers (
     driver_id SERIAL PRIMARY KEY,
     driver_ref VARCHAR(100) NOT NULL UNIQUE,
@@ -23,7 +15,7 @@ CREATE TABLE drivers (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Таблица команд (конѝтрукторов)
+-- ??????? ??????
 CREATE TABLE constructors (
     constructor_id SERIAL PRIMARY KEY,
     constructor_ref VARCHAR(100) NOT NULL UNIQUE,
@@ -34,7 +26,7 @@ CREATE TABLE constructors (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Таблица траѝѝ
+-- ??????? ?????
 CREATE TABLE circuits (
     circuit_id SERIAL PRIMARY KEY,
     circuit_ref VARCHAR(100) NOT NULL UNIQUE,
@@ -49,17 +41,13 @@ CREATE TABLE circuits (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Таблица ѝтатуѝов
+-- ??????? ????????
 CREATE TABLE status (
     status_id SERIAL PRIMARY KEY,
     status VARCHAR(100) NOT NULL
 );
 
--- ====================
--- ОСНОВНЫЕ ТНБЛИЦЫ
--- ====================
-
--- Таблица гонок
+-- ??????? ?????
 CREATE TABLE races (
     race_id SERIAL PRIMARY KEY,
     year INTEGER NOT NULL CHECK (year >= 1950 AND year <= 2100),
@@ -74,7 +62,7 @@ CREATE TABLE races (
     UNIQUE (year, round)
 );
 
--- Таблица результатов гонок (транзакционнаѝ, >5000 запиѝей)
+-- ??????? ??????????? ?????
 CREATE TABLE results (
     result_id SERIAL PRIMARY KEY,
     race_id INTEGER NOT NULL REFERENCES races(race_id) ON DELETE CASCADE,
@@ -98,7 +86,7 @@ CREATE TABLE results (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Таблица квалификационных результатов
+-- ??????? ???????????????? ???????????
 CREATE TABLE qualifying (
     qualify_id SERIAL PRIMARY KEY,
     race_id INTEGER NOT NULL REFERENCES races(race_id) ON DELETE CASCADE,
@@ -113,7 +101,7 @@ CREATE TABLE qualifying (
     UNIQUE (race_id, driver_id)
 );
 
--- Таблица времени прохождениѝ кругов (транзакционнаѝ, много запиѝей)
+-- ??????? ??????? ??????????? ?????? 
 CREATE TABLE lap_times (
     lap_time_id SERIAL PRIMARY KEY,
     race_id INTEGER NOT NULL REFERENCES races(race_id) ON DELETE CASCADE,
@@ -126,7 +114,7 @@ CREATE TABLE lap_times (
     UNIQUE (race_id, driver_id, lap)
 );
 
--- Таблица пит-ѝтопов
+-- ??????? ???-??????
 CREATE TABLE pit_stops (
     pit_stop_id SERIAL PRIMARY KEY,
     race_id INTEGER NOT NULL REFERENCES races(race_id) ON DELETE CASCADE,
@@ -140,7 +128,7 @@ CREATE TABLE pit_stops (
     UNIQUE (race_id, driver_id, stop)
 );
 
--- Таблица турнирной таблицы пилотов
+-- ??????? ????????? ??????? ???????
 CREATE TABLE driver_standings (
     driver_standing_id SERIAL PRIMARY KEY,
     race_id INTEGER NOT NULL REFERENCES races(race_id) ON DELETE CASCADE,
@@ -154,7 +142,7 @@ CREATE TABLE driver_standings (
     UNIQUE (race_id, driver_id)
 );
 
--- Таблица турнирной таблицы команд
+-- ??????? ????????? ??????? ??????
 CREATE TABLE constructor_standings (
     constructor_standing_id SERIAL PRIMARY KEY,
     race_id INTEGER NOT NULL REFERENCES races(race_id) ON DELETE CASCADE,
@@ -168,11 +156,8 @@ CREATE TABLE constructor_standings (
     UNIQUE (race_id, constructor_id)
 );
 
--- ====================
--- СЛУЖЕБНЫЕ ТНБЛИЦЫ
--- ====================
 
--- Таблица пользователей ѝиѝтемы
+-- ??????? ????????????? ???????
 CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
@@ -184,7 +169,7 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Таблица журнала аудита
+-- ??????? ??????? ??????
 CREATE TABLE audit_log (
     audit_id SERIAL PRIMARY KEY,
     table_name VARCHAR(100) NOT NULL,
@@ -195,25 +180,3 @@ CREATE TABLE audit_log (
     changed_by VARCHAR(255),
     changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
--- Комментарии к таблицам
-COMMENT ON TABLE drivers IS 'Информациѝ о пилотах Формулы 1';
-COMMENT ON TABLE constructors IS 'Информациѝ о командах (конѝтрукторах)';
-COMMENT ON TABLE circuits IS 'Информациѝ о гоночных траѝѝах';
-COMMENT ON TABLE races IS 'Информациѝ о гонках';
-COMMENT ON TABLE results IS 'Результаты гонок пилотов';
-COMMENT ON TABLE qualifying IS 'Результаты квалификаций';
-COMMENT ON TABLE lap_times IS 'Времѝ прохождениѝ кругов';
-COMMENT ON TABLE pit_stops IS 'Информациѝ о пит-ѝтопах';
-COMMENT ON TABLE driver_standings IS 'Турнирнаѝ таблица пилотов поѝле каждой гонки';
-COMMENT ON TABLE constructor_standings IS 'Турнирнаѝ таблица команд поѝле каждой гонки';
-COMMENT ON TABLE users IS 'Пользователи информационной ѝиѝтемы';
-COMMENT ON TABLE audit_log IS 'Журнал аудита изменений данных';
-
--- Вѝтавка базовых ѝтатуѝов
-INSERT INTO status (status) VALUES 
-('Finished'), ('Disqualified'), ('Accident'), ('Collision'), 
-('+1 Lap'), ('+2 Laps'), ('+3 Laps'), ('+4 Laps'), ('+5 Laps'),
-('Retired'), ('Engine'), ('Gearbox'), ('Transmission'), ('Clutch'),
-('Hydraulics'), ('Electrical'), ('Fuel System'), ('Brakes'),
-('Spun off'), ('Withdrawn'), ('Suspension'), ('Wheel');

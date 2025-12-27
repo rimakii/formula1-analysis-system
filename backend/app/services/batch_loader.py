@@ -192,7 +192,6 @@ class BatchLoader:
             try:
                 result_id = safe_int(row.get('resultId'))
                 
-                # ????????? ?????????????
                 existing = self.db.query(Result).filter(Result.result_id == result_id).first()
                 if existing:
                     continue
@@ -332,7 +331,6 @@ class BatchLoader:
             try:
                 race_id = int(row['raceId'])
                 
-                # ????????? ?????????????
                 existing = self.db.query(Race).filter(Race.race_id == race_id).first()
                 if existing:
                     continue

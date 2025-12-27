@@ -13,10 +13,6 @@ from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP
 from app.database import Base
 
 
-# ====================
-# ?????????? ???????
-# ====================
-
 class Driver(Base):
     """?????? ???????-1"""
     __tablename__ = "drivers"
@@ -33,7 +29,6 @@ class Driver(Base):
     created_at = Column(TIMESTAMP, server_default=func.current_timestamp())
     updated_at = Column(TIMESTAMP, server_default=func.current_timestamp())
 
-    # Relationships
     results = relationship("Result", back_populates="driver")
     qualifying = relationship("Qualifying", back_populates="driver")
     lap_times = relationship("LapTime", back_populates="driver")
@@ -56,7 +51,6 @@ class Constructor(Base):
     created_at = Column(TIMESTAMP, server_default=func.current_timestamp())
     updated_at = Column(TIMESTAMP, server_default=func.current_timestamp())
 
-    # Relationships
     results = relationship("Result", back_populates="constructor")
     qualifying = relationship("Qualifying", back_populates="constructor")
     constructor_standings = relationship("ConstructorStanding", back_populates="constructor")
@@ -81,7 +75,6 @@ class Circuit(Base):
     created_at = Column(TIMESTAMP, server_default=func.current_timestamp())
     updated_at = Column(TIMESTAMP, server_default=func.current_timestamp())
 
-    # Relationships
     races = relationship("Race", back_populates="circuit")
 
     def __repr__(self):
@@ -95,16 +88,11 @@ class Status(Base):
     status_id = Column(Integer, primary_key=True, autoincrement=True)
     status = Column(String(100), nullable=False)
 
-    # Relationships
     results = relationship("Result", back_populates="status_ref")
 
     def __repr__(self):
         return f"<Status(id={self.status_id}, status='{self.status}')>"
 
-
-# ====================
-# ???????? ???????
-# ====================
 
 class Race(Base):
     """?????"""
@@ -121,14 +109,12 @@ class Race(Base):
     created_at = Column(TIMESTAMP, server_default=func.current_timestamp())
     updated_at = Column(TIMESTAMP, server_default=func.current_timestamp())
 
-    # Constraints
     __table_args__ = (
         CheckConstraint('year >= 1950 AND year <= 2100', name='races_year_check'),
         CheckConstraint('round > 0', name='races_round_check'),
         UniqueConstraint('year', 'round', name='races_year_round_key'),
     )
 
-    # Relationships
     circuit = relationship("Circuit", back_populates="races")
     results = relationship("Result", back_populates="race", cascade="all, delete-orphan")
     qualifying = relationship("Qualifying", back_populates="race", cascade="all, delete-orphan")
@@ -166,7 +152,6 @@ class Result(Base):
     created_at = Column(TIMESTAMP, server_default=func.current_timestamp())
     updated_at = Column(TIMESTAMP, server_default=func.current_timestamp())
 
-    # Constraints
     __table_args__ = (
         CheckConstraint('grid >= 0', name='results_grid_check'),
         CheckConstraint('position > 0', name='results_position_check'),
@@ -176,7 +161,6 @@ class Result(Base):
         CheckConstraint('fastest_lap > 0', name='results_fastest_lap_check'),
     )
 
-    # Relationships
     race = relationship("Race", back_populates="results")
     driver = relationship("Driver", back_populates="results")
     constructor = relationship("Constructor", back_populates="results")
@@ -201,13 +185,11 @@ class Qualifying(Base):
     q3 = Column(String(20))
     created_at = Column(TIMESTAMP, server_default=func.current_timestamp())
 
-    # Constraints
     __table_args__ = (
         CheckConstraint('position > 0', name='qualifying_position_check'),
         UniqueConstraint('race_id', 'driver_id', name='qualifying_race_id_driver_id_key'),
     )
 
-    # Relationships
     race = relationship("Race", back_populates="qualifying")
     driver = relationship("Driver", back_populates="qualifying")
     constructor = relationship("Constructor", back_populates="qualifying")
@@ -229,14 +211,12 @@ class LapTime(Base):
     milliseconds = Column(BigInteger)
     created_at = Column(TIMESTAMP, server_default=func.current_timestamp())
 
-    # Constraints
     __table_args__ = (
         CheckConstraint('lap > 0', name='lap_times_lap_check'),
         CheckConstraint('position > 0', name='lap_times_position_check'),
         UniqueConstraint('race_id', 'driver_id', 'lap', name='lap_times_race_id_driver_id_lap_key'),
     )
 
-    # Relationships
     race = relationship("Race", back_populates="lap_times")
     driver = relationship("Driver", back_populates="lap_times")
 
@@ -258,14 +238,12 @@ class PitStop(Base):
     milliseconds = Column(BigInteger)
     created_at = Column(TIMESTAMP, server_default=func.current_timestamp())
 
-    # Constraints
     __table_args__ = (
         CheckConstraint('stop > 0', name='pit_stops_stop_check'),
         CheckConstraint('lap > 0', name='pit_stops_lap_check'),
         UniqueConstraint('race_id', 'driver_id', 'stop', name='pit_stops_race_id_driver_id_stop_key'),
     )
 
-    # Relationships
     race = relationship("Race", back_populates="pit_stops")
     driver = relationship("Driver", back_populates="pit_stops")
 
@@ -287,7 +265,6 @@ class DriverStanding(Base):
     created_at = Column(TIMESTAMP, server_default=func.current_timestamp())
     updated_at = Column(TIMESTAMP, server_default=func.current_timestamp())
 
-    # Constraints
     __table_args__ = (
         CheckConstraint('points >= 0', name='driver_standings_points_check'),
         CheckConstraint('position > 0', name='driver_standings_position_check'),
@@ -295,7 +272,6 @@ class DriverStanding(Base):
         UniqueConstraint('race_id', 'driver_id', name='driver_standings_race_id_driver_id_key'),
     )
 
-    # Relationships
     race = relationship("Race", back_populates="driver_standings")
     driver = relationship("Driver", back_populates="driver_standings")
 
@@ -317,7 +293,6 @@ class ConstructorStanding(Base):
     created_at = Column(TIMESTAMP, server_default=func.current_timestamp())
     updated_at = Column(TIMESTAMP, server_default=func.current_timestamp())
 
-    # Constraints
     __table_args__ = (
         CheckConstraint('points >= 0', name='constructor_standings_points_check'),
         CheckConstraint('position > 0', name='constructor_standings_position_check'),
@@ -325,17 +300,11 @@ class ConstructorStanding(Base):
         UniqueConstraint('race_id', 'constructor_id', name='constructor_standings_race_id_constructor_id_key'),
     )
 
-    # Relationships
     race = relationship("Race", back_populates="constructor_standings")
     constructor = relationship("Constructor", back_populates="constructor_standings")
 
     def __repr__(self):
         return f"<ConstructorStanding(race_id={self.race_id}, position={self.position})>"
-
-
-# ====================
-# ????????? ???????
-# ====================
 
 class User(Base):
     """???????????? ???????"""
@@ -367,7 +336,6 @@ class AuditLog(Base):
     changed_by = Column(String(255))
     changed_at = Column(TIMESTAMP, server_default=func.current_timestamp())
 
-    # Constraints
     __table_args__ = (
         CheckConstraint("operation IN ('INSERT', 'UPDATE', 'DELETE')", name='audit_log_operation_check'),
     )

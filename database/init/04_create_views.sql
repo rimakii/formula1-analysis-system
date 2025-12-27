@@ -1,7 +1,4 @@
--- Представления для аналитики
--- F1 Analytics System
-
--- Представление: Агрегированная статистика по пилотам
+-- ?????????????? ?????????? ?? ???????
 CREATE OR REPLACE VIEW v_driver_statistics AS
 SELECT 
     d.driver_id,
@@ -22,9 +19,7 @@ LEFT JOIN results r ON d.driver_id = r.driver_id
 LEFT JOIN races ra ON r.race_id = ra.race_id
 GROUP BY d.driver_id, d.driver_ref, d.forename, d.surname, d.nationality, d.dob;
 
-COMMENT ON VIEW v_driver_statistics IS 'Полная статистика по всем пилотам';
-
--- Представление: Агрегированная статистика по командам
+-- ?????????????? ?????????? ?? ????????
 CREATE OR REPLACE VIEW v_constructor_statistics AS
 SELECT 
     c.constructor_id,
@@ -42,9 +37,8 @@ LEFT JOIN results r ON c.constructor_id = r.constructor_id
 LEFT JOIN races ra ON r.race_id = ra.race_id
 GROUP BY c.constructor_id, c.constructor_ref, c.name, c.nationality;
 
-COMMENT ON VIEW v_constructor_statistics IS 'Полная статистика по всем командам';
 
--- Представление: Детальные результаты гонок
+-- ????????? ?????????? ?????
 CREATE OR REPLACE VIEW v_race_results_detailed AS
 SELECT 
     r.result_id,
@@ -71,5 +65,3 @@ JOIN circuits ci ON ra.circuit_id = ci.circuit_id
 JOIN drivers d ON r.driver_id = d.driver_id
 JOIN constructors c ON r.constructor_id = c.constructor_id
 JOIN status s ON r.status_id = s.status_id;
-
-COMMENT ON VIEW v_race_results_detailed IS 'Детальная информация о результатах гонок';

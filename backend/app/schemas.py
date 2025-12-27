@@ -8,11 +8,6 @@ from datetime import date, time as Time, datetime
 from typing import Optional
 from decimal import Decimal
 
-
-# ====================
-# USER SCHEMAS
-# ====================
-
 class UserBase(BaseModel):
     """??????? ????? ????????????"""
     email: EmailStr
@@ -43,11 +38,6 @@ class UserUpdate(BaseModel):
     
     model_config = ConfigDict(from_attributes=True)
 
-
-# ====================
-# AUTH SCHEMAS
-# ====================
-
 class Token(BaseModel):
     """JWT ?????"""
     access_token: str
@@ -61,13 +51,9 @@ class TokenData(BaseModel):
 
 class LoginRequest(BaseModel):
     """????? ??? ??????"""
-    username: EmailStr  # email ???????????? ??? username
+    username: EmailStr  
     password: str
 
-
-# ====================
-# DRIVER SCHEMAS
-# ====================
 
 class DriverBase(BaseModel):
     """??????? ????? ??????"""
@@ -109,10 +95,6 @@ class DriverUpdate(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-# ====================
-# CONSTRUCTOR SCHEMAS
-# ====================
-
 class ConstructorBase(BaseModel):
     """??????? ????? ???????"""
     constructor_ref: str = Field(..., min_length=1, max_length=255)
@@ -144,10 +126,6 @@ class ConstructorUpdate(BaseModel):
     
     model_config = ConfigDict(from_attributes=True)
 
-
-# ====================
-# CIRCUIT SCHEMAS
-# ====================
 
 class CircuitBase(BaseModel):
     """??????? ????? ??????"""
@@ -186,11 +164,6 @@ class CircuitUpdate(BaseModel):
     url: Optional[str] = None
     
     model_config = ConfigDict(from_attributes=True)
-
-
-# ====================
-# RACE SCHEMAS
-# ====================
 
 class RaceBase(BaseModel):
     """??????? ????? ?????"""
@@ -237,11 +210,6 @@ class RaceUpdate(BaseModel):
     url: Optional[str] = None
     
     model_config = ConfigDict(from_attributes=True)
-
-
-# ====================
-# RESULT SCHEMAS
-# ====================
 
 class ResultBase(BaseModel):
     """??????? ????? ?????????? ?????"""
@@ -300,10 +268,6 @@ class ResultUpdate(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-# ====================
-# STATUS SCHEMAS
-# ====================
-
 class StatusBase(BaseModel):
     """??????? ????? ??????? ??????"""
     status: str = Field(..., min_length=1, max_length=255)
@@ -320,10 +284,6 @@ class StatusResponse(StatusBase):
     
     model_config = ConfigDict(from_attributes=True)
 
-
-# ====================
-# ANALYTICS SCHEMAS (??? VIEW ? ???????)
-# ====================
 
 class DriverStatistics(BaseModel):
     """?????????? ?????? ?? VIEW"""

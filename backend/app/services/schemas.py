@@ -2,7 +2,6 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional
 from datetime import datetime
 
-# === User Schemas ===
 class UserBase(BaseModel):
     email: EmailStr
     full_name: Optional[str] = None
@@ -20,7 +19,6 @@ class UserResponse(UserBase):
     class Config:
         from_attributes = True
 
-# === Token Schemas ===
 class Token(BaseModel):
     access_token: str
     token_type: str
